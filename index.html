@@ -30,6 +30,8 @@
   :focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:4px; }
 
 
+
+  .hero-canvas{ position:absolute; inset:0; width:100%; height:100%; z-index:0; }
   /* hero cinematic */
   .hero{ position:relative; min-height:100svh; display:flex; align-items:flex-end; overflow:hidden;
     background:#0d0f12 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1400' height='900'%3E%3Cdefs%3E%3CradialGradient id='a' cx='20%25' cy='60%25' r='70%25'%3E%3Cstop offset='0' stop-color='%23223355'/%3E%3Cstop offset='1' stop-color='%230d0f12'/%3E%3C/radialGradient%3E%3CradialGradient id='b' cx='75%25' cy='30%25' r='55%25'%3E%3Cstop offset='0' stop-color='%23332244' stop-opacity='.6'/%3E%3Cstop offset='1' stop-color='transparent'/%3E%3C/radialGradient%3E%3CradialGradient id='c' cx='50%25' cy='90%25' r='40%25'%3E%3Cstop offset='0' stop-color='%23443322' stop-opacity='.4'/%3E%3Cstop offset='1' stop-color='transparent'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect fill='url(%23a)' width='1400' height='900'/%3E%3Crect fill='url(%23b)' width='1400' height='900'/%3E%3Crect fill='url(%23c)' width='1400' height='900'/%3E%3C/svg%3E") center/cover no-repeat; }
@@ -213,6 +215,7 @@
 
 <main id="top">
   <section class="hero" id="hero">
+    <canvas id="heroCanvas" class="hero-canvas"></canvas>
     <video class="hero-vid" src="videos/hero.mp4" autoplay muted loop playsinline
       onerror="this.remove()"></video>
     <div class="hero-overlay"></div>
@@ -232,7 +235,7 @@
     <div class="wrap">
       <h2 class="sec-title">Showreel</h2>
       <div class="reel" id="reelBox" role="button" tabindex="0" aria-label="Play showreel">
-        <img src="thumbs/showreel.jpg" alt="" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.8">
+        <img src="https://img.youtube.com/vi/q5HIHWhYQ14/maxresdefault.jpg" alt="" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.8">
         <div class="label"><b>Showreel 2026</b><span data-i="reelSub"></span></div>
         <span class="pbtn" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
       </div>
@@ -386,7 +389,7 @@ function renderTabs(){
 }
 function renderWork(){
   return P.map((p,i)=>{ if(cat!=='all' && p.c!==cat) return ''; const tn=p.tone||TONE[p.c]; return `<article class="card" data-idx="${i}" tabindex="0" role="button" aria-label="${esc(p.t)}">
-    <div class="thumb" style="--t1:${tn[0]};--t2:${tn[1]}">${p.thumb?`<img src="${p.thumb}" alt="" loading="lazy" onerror="this.remove()">`:''}<span class="mini">${play}</span></div>
+    <div class="thumb" style="--t1:${tn[0]};--t2:${tn[1]}">${(p.thumb||((p.video||{}).yt&&`https://img.youtube.com/vi/${p.video.yt}/mqdefault.jpg`))?`<img src="${p.thumb||`https://img.youtube.com/vi/${p.video.yt}/mqdefault.jpg`}" alt="" loading="lazy" onerror="this.remove()">`:''}<span class="mini">${play}</span></div>
     <div class="body"><h3>${esc(p.t)}</h3><div class="client">${esc(p.by)}</div>${p[lang]?`<p class="desc">${esc(p[lang])}</p>`:''}</div></article>`; }).join('');
 }
 document.addEventListener('click',e=>{ const t=e.target.closest('.tab'); if(!t) return; cat=t.dataset.c; renderTabs(); $('feat').innerHTML=renderWork(); });
@@ -435,6 +438,43 @@ $('lbClose').onclick=close; lb.onclick=e=>{ if(e.target===lb) close(); };
 const menu=$('menu'), nav=$('nav');
 menu.onclick=()=>{ const o=nav.classList.toggle('show'); menu.setAttribute('aria-expanded',o); };
 nav.addEventListener('click',e=>{ if(e.target.tagName==='A'){ nav.classList.remove('show'); menu.setAttribute('aria-expanded',false); } });
+
+/* hero particles */
+(function(){
+  const c=document.getElementById('heroCanvas'); if(!c) return;
+  const gl=c.getContext('2d'); if(!gl) return;
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  let W,H,mx=0.5,my=0.5;
+  function resize(){ W=c.width=c.offsetWidth; H=c.height=c.offsetHeight; }
+  resize(); addEventListener('resize',resize);
+  c.addEventListener('pointermove',e=>{mx=e.offsetX/W;my=e.offsetY/H;},{passive:true});
+  const N=80, pts=[];
+  for(let i=0;i<N;i++) pts.push({x:Math.random(),y:Math.random(),z:Math.random()*0.8+0.2,
+    vx:(Math.random()-0.5)*0.0003,vy:(Math.random()-0.5)*0.0003,
+    hue:200+Math.random()*40});
+  function draw(){
+    if(reduce) return;
+    requestAnimationFrame(draw);
+    gl.clearRect(0,0,W,H);
+    for(const p of pts){
+      p.x+=p.vx+(mx-0.5)*0.0004*p.z; p.y+=p.vy+(my-0.5)*0.0003*p.z;
+      if(p.x<0)p.x=1; if(p.x>1)p.x=0; if(p.y<0)p.y=1; if(p.y>1)p.y=0;
+      const r=p.z*3.5, a=p.z*0.5;
+      gl.beginPath(); gl.arc(p.x*W,p.y*H,r,0,Math.PI*2);
+      gl.fillStyle=`hsla(${p.hue},40%,70%,${a})`; gl.fill();
+    }
+    // connection lines
+    for(let i=0;i<N;i++) for(let j=i+1;j<N;j++){
+      const dx=(pts[i].x-pts[j].x)*W, dy=(pts[i].y-pts[j].y)*H;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<150){
+        gl.beginPath(); gl.moveTo(pts[i].x*W,pts[i].y*H); gl.lineTo(pts[j].x*W,pts[j].y*H);
+        gl.strokeStyle=`rgba(160,180,210,${(1-d/150)*0.12})`; gl.lineWidth=0.5; gl.stroke();
+      }
+    }
+  }
+  if(!reduce) draw();
+})();
 </script>
 </body>
 </html>
